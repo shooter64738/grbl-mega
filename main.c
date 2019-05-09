@@ -43,7 +43,7 @@ int main(void)
   settings_init(); // Load Grbl settings from EEPROM
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
-
+	
   memset(sys_position,0,sizeof(sys_position)); // Clear machine position.
   sei(); // Enable interrupts
 
@@ -94,6 +94,7 @@ int main(void)
     sleep_init();
     plan_reset(); // Clear block buffer and planner variables
     st_reset(); // Clear stepper subsystem variables.
+	backlash_initialize();
 
     // Sync cleared gcode and planner positions to current system position.
     plan_sync_position();

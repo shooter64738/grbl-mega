@@ -32,6 +32,9 @@
   #define DEFAULT_X_STEPS_PER_MM 250.0
   #define DEFAULT_Y_STEPS_PER_MM 250.0
   #define DEFAULT_Z_STEPS_PER_MM 250.0
+  #define DEFAULT_X_BACKLASH_MM 5.0
+  #define DEFAULT_Y_BACKLASH_MM 5.0
+  #define DEFAULT_Z_BACKLASH_MM 5.0
   #define DEFAULT_X_MAX_RATE 500.0 // mm/min
   #define DEFAULT_Y_MAX_RATE 500.0 // mm/min
   #define DEFAULT_Z_MAX_RATE 500.0 // mm/min

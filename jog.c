@@ -35,7 +35,7 @@ uint8_t jog_execute(plan_line_data_t *pl_data, parser_block_t *gc_block)
   }
 
   // Valid jog command. Plan, set state, and execute.
-  mc_line(gc_block->values.xyz,pl_data);
+  mc_line(gc_block->values.xyz,pl_data,0);
   if (sys.state == STATE_IDLE) {
     if (plan_get_current_block() != NULL) { // Check if there is a block to execute.
       sys.state = STATE_JOG;

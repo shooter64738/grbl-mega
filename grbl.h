@@ -50,6 +50,7 @@
 #include "eeprom.h"
 #include "gcode.h"
 #include "limits.h"
+#include "backlash.h"
 #include "motion_control.h"
 #include "planner.h"
 #include "print.h"
