@@ -21,80 +21,7 @@ along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "grbl.h"
 
-void mc_backlash_comp(float *target, plan_line_data_t *pl_data)
-{
-	int32_t target_steps[N_AXIS];
-	int32_t *position_steps;
-	
-	if (pl_data->condition & PL_COND_FLAG_SYSTEM_MOTION)
-	{
-		#ifdef COREXY
-		position_steps[X_AXIS] = system_convert_corexy_to_x_axis_steps(sys_position);
-		position_steps[Y_AXIS] = system_convert_corexy_to_y_axis_steps(sys_position);
-		position_steps[Z_AXIS] = sys_position[Z_AXIS];
-		#else
-		memcpy(position_steps, sys_position, sizeof(sys_position));
-		#endif
-	}
-	else
-	{
-		position_steps = plan_get_position();
-	}
-	
-	uint8_t idx=0;
-	uint8_t needs_comp = 0;
-	
-	for (idx = 0;idx<N_AXIS;idx++)
-	{
-		printString("last comp dir ");printInteger(idx);serial_write('=');printInteger(back_lash_compensation.last_comp_direction[idx]); serial_write(13);
-		
-		
-		back_lash_compensation.comp_per_axis_steps[idx] = 0;
-		target_steps[idx] = lround(target[idx] * settings.steps_per_mm[idx]);
-		int32_t step_diff=(target_steps[idx] - position_steps[idx]);
-		step_diff = step_diff>0?1:(step_diff<0?-1:0);
-		if (back_lash_compensation.last_comp_direction[idx]!=0 && (back_lash_compensation.last_comp_direction[idx] !=step_diff))
-		{
-			printString("comp dir ");printInteger(idx);serial_write('=');printInteger(step_diff); serial_write(13);
-			back_lash_compensation.comp_per_axis_steps[idx]	=
-				(settings.backlash_per_axis[idx]*settings.steps_per_mm[idx]);
-			
-			back_lash_compensation.new_comp_direction[idx] = step_diff;
-			
-			needs_comp = 1;
-			back_lash_compensation.axis_has_compensation[idx] = 1;
-		}
-	}
-	
-	//if (needs_comp)
-	//{
-		//printString("needs comp");
-		//printInteger(pl_data->condition);
-		//printInteger(pl_data->feed_rate);
-		//printInteger(pl_data->line_number);
-		//printInteger(pl_data->spindle_speed);
-		//
-		//plan_line_data_t *comp_plan_data;
-		//comp_plan_data->condition=PL_COND_FLAG_RAPID_MOTION;
-		//comp_plan_data->feed_rate = pl_data->feed_rate;
-		//comp_plan_data->line_number=pl_data->line_number;
-		//comp_plan_data->spindle_speed=pl_data->spindle_speed;
-		////memcpy(comp_plan_data,pl_data,sizeof(plan_line_data_t));
-		////comp_plan_data->condition |= (1<<PL_COND_FLAG_BACKLASH_COMP);
-		//float comp_target[N_AXIS];
-		//for (idx=0;idx<N_AXIS;idx++)
-		//{
-			//target[idx] +=back_lash_compensation.comp_per_axis_steps[idx];
-			//printString("axis ");
-			//printInteger(idx);
-			//serial_write('=');
-			//printFloat(target[idx],4);
-			//serial_write(13);
-			////comp_target[idx]=comp_per_axis[idx];
-		//}
-		////mc_line(comp_target,comp_plan_data,1);
-	//}
-}
+
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
@@ -103,7 +30,7 @@ void mc_backlash_comp(float *target, plan_line_data_t *pl_data)
 // segments, must pass through this routine before being passed to the planner. The seperation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
-void mc_line(float *target, plan_line_data_t *pl_data, uint8_t is_comp)
+void mc_line(float *target, plan_line_data_t *pl_data)
 {
 	// If enabled, check for soft limit violations. Placed here all line motions are picked up
 	// from everywhere in Grbl.
@@ -128,9 +55,14 @@ void mc_line(float *target, plan_line_data_t *pl_data, uint8_t is_comp)
 	// indicates to Grbl what is a backlash compensation motion, so that Grbl executes the move but
 	// doesn't update the machine position values. Since the position values used by the g-code
 	// parser and planner are separate from the system machine positions, this is doable.
-
-	if (is_comp==0)
-	mc_backlash_comp(target,pl_data);
+	
+	//Determines if the motion we are about to execute has an axis moving in the opposite direction
+	//If it does, the value in settings for that axis is used to determine how far it needs to move
+	//to take up the mechanical slack in the motion for that axis. 
+	//Since this doe snot 'insert' a motion to the planner, it just modifies an existing motion
+	//there should be no need to do any other checking of the motion buffer beyond what the planner
+	//is already doing. 
+	backlash_comp(target,pl_data);
 
 	// If the buffer is full: good! That means we are well ahead of the robot.
 	// Remain in this loop until there is room in the buffer.
@@ -257,14 +189,14 @@ uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, uint8_t is_clockwise_arc)
 			position[axis_1] = center_axis1 + r_axis1;
 			position[axis_linear] += linear_per_segment;
 
-			mc_line(position, pl_data,0);
+			mc_line(position, pl_data);
 
 			// Bail mid-circle on system abort. Runtime command check already performed by mc_line.
 			if (sys.abort) { return; }
 		}
 	}
 	// Ensure last segment arrives at target location.
-	mc_line(target, pl_data,0);
+	mc_line(target, pl_data);
 }
 
 
@@ -355,7 +287,7 @@ uint8_t mc_probe_cycle(float *target, plan_line_data_t *pl_data, uint8_t parser_
 	}
 
 	// Setup and queue probing motion. Auto cycle-start should not start the cycle.
-	mc_line(target, pl_data,0);
+	mc_line(target, pl_data);
 
 	// Activate the probing state monitor in the stepper module.
 	sys_probe_state = PROBE_ACTIVE;
