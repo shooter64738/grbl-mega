@@ -378,6 +378,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 		
 		target_steps[idx] = lround(target[idx]*settings.steps_per_mm[idx]);
 		block->steps[idx] = labs(target_steps[idx]-position_steps[idx]) + back_lash_compensation.comp_per_axis_steps[idx];
+		block->back_lash_steps_per_axis[idx] = back_lash_compensation.comp_per_axis_steps[idx];
 		block->step_event_count = max(block->step_event_count, block->steps[idx]);
 		delta_mm = (target_steps[idx] - position_steps[idx])/settings.steps_per_mm[idx];
 		#endif
@@ -499,7 +500,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 void plan_sync_position()
 {
 	// TODO: For motor configurations not in the same coordinate frame as the machine position,
-	// this function needs to be updated to accomodate the difference.
+	// this function needs to be updated to accommodate the difference.
 	uint8_t idx;
 	for (idx=0; idx<N_AXIS; idx++) {
 		#ifdef COREXY

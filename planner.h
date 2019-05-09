@@ -79,6 +79,7 @@ typedef struct {
 
   // Stored spindle speed data used by spindle overrides and resuming methods.
   float spindle_speed;    // Block spindle speed. Copied from pl_line_data.
+  uint16_t back_lash_steps_per_axis[N_AXIS];
 } plan_block_t;
 
 
