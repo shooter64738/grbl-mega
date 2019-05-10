@@ -63,7 +63,7 @@ typedef struct {
 	uint32_t step_event_count;
 	uint8_t direction_bits[N_AXIS];
 	uint8_t is_pwm_rate_adjusted; // Tracks motions that require constant laser power/rate
-	uint16_t back_lash_steps_per_axis[N_AXIS];
+	uint8_t back_lash_comp;
 } st_block_t;
 #else
 typedef struct {
@@ -71,7 +71,7 @@ typedef struct {
 	uint32_t step_event_count;
 	uint8_t direction_bits;
 	uint8_t is_pwm_rate_adjusted; // Tracks motions that require constant laser power/rate
-	uint16_t back_lash_steps_per_axis[N_AXIS];
+	uint8_t back_lash_comp;
 } st_block_t;
 #endif // Ramps Board
 
@@ -474,27 +474,23 @@ ISR(TIMER1_COMPA_vect)
 		st.step_outbits[X_AXIS] |= (1<<STEP_BIT(X_AXIS));
 		st.counter_x -= st.exec_block->step_event_count;
 		//Dont update system position data until all backlash steps are taken up.
-		if (st.exec_block->back_lash_steps_per_axis[X_AXIS]==0)
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits[X_AXIS] & (1<<DIRECTION_BIT(X_AXIS)))
 			{  sys_position[X_AXIS]--; }
 			else { sys_position[X_AXIS]++; }
 		}
-		else
-		st.exec_block->back_lash_steps_per_axis[X_AXIS]--;
 	}
 	#else
 	if (st.counter_x > st.exec_block->step_event_count) {
 		st.step_outbits |= (1<<X_STEP_BIT);
 		st.counter_x -= st.exec_block->step_event_count;
 		//Dont update system position data until all backlash steps are taken up.
-		if (st.exec_block->back_lash_steps_per_axis[X_AXIS] == 0)
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys_position[X_AXIS]--; }
 			else { sys_position[X_AXIS]++; }
 		}
-		else
-		st.exec_block->back_lash_steps_per_axis[X_AXIS]--;
 	}
 	#endif // Ramps Board
 
@@ -508,26 +504,22 @@ ISR(TIMER1_COMPA_vect)
 		st.step_outbits[Y_AXIS] |= (1<<STEP_BIT(Y_AXIS));
 		st.counter_y -= st.exec_block->step_event_count;
 		//Dont update system position data until all backlash steps are taken up.
-		if (st.exec_block->back_lash_steps_per_axis[Y_AXIS] == 0)
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits[Y_AXIS] & (1<<DIRECTION_BIT(Y_AXIS))) { sys_position[Y_AXIS]--; }
 			else { sys_position[Y_AXIS]++; }
 		}
-		else
-		st.exec_block->back_lash_steps_per_axis[Y_AXIS]--;
 	}
 	#else
 	if (st.counter_y > st.exec_block->step_event_count) {
 		st.step_outbits |= (1<<Y_STEP_BIT);
 		st.counter_y -= st.exec_block->step_event_count;
 		//Dont update system position data until all backlash steps are taken up.
-		if (st.exec_block->back_lash_steps_per_axis[Y_AXIS] == 0)
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys_position[Y_AXIS]--; }
 			else { sys_position[Y_AXIS]++; }
-		}
-		else
-		st.exec_block->back_lash_steps_per_axis[Y_AXIS]--;
+		}		
 	}
 	#endif // Ramps Board
 	#ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
@@ -540,26 +532,23 @@ ISR(TIMER1_COMPA_vect)
 		st.step_outbits[Z_AXIS] |= (1<<STEP_BIT(Z_AXIS));
 		st.counter_z -= st.exec_block->step_event_count;
 		//Dont update system position data until all backlash steps are taken up.
-		if (st.exec_block->back_lash_steps_per_axis[Z_AXIS] == 0)
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits[Z_AXIS] & (1<<DIRECTION_BIT(Z_AXIS))) { sys_position[Z_AXIS]--; }
 			else { sys_position[Z_AXIS]++; }
 		}
-		else
-		st.exec_block->back_lash_steps_per_axis[Z_AXIS]--;
+		
 	}
 	#else
 	if (st.counter_z > st.exec_block->step_event_count) {
 		st.step_outbits |= (1<<Z_STEP_BIT);
 		st.counter_z -= st.exec_block->step_event_count;
 		//Dont update system position data until all backlash steps are taken up.
-		if (st.exec_block->back_lash_steps_per_axis[Z_AXIS] == 0)
+		if (!st.exec_block->back_lash_comp)
 		{
 			if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys_position[Z_AXIS]--; }
 			else { sys_position[Z_AXIS]++; }
 		}
-		else
-		st.exec_block->back_lash_steps_per_axis[Z_AXIS]--;
 	}
 	#endif // Ramps Board
 
@@ -854,7 +843,7 @@ void st_prep_buffer()
 				for (idx=0; idx<N_AXIS; idx++)
 				{
 					st_prep_block->steps[idx] = (pl_block->steps[idx] << 1);
-					st_prep_block->back_lash_steps_per_axis[idx] = pl_block->back_lash_steps_per_axis[idx];
+					st_prep_block->back_lash_comp = pl_block->back_lash_comp;
 				}
 				st_prep_block->step_event_count = (pl_block->step_event_count << 1);
 				#else
@@ -864,7 +853,7 @@ void st_prep_buffer()
 				for (idx=0; idx<N_AXIS; idx++)
 				{
 					st_prep_block->steps[idx] = pl_block->steps[idx] << MAX_AMASS_LEVEL;
-					st_prep_block->back_lash_steps_per_axis[idx] = pl_block->back_lash_steps_per_axis[idx];
+					st_prep_block->back_lash_comp = pl_block->back_lash_comp;
 				}
 				st_prep_block->step_event_count = pl_block->step_event_count << MAX_AMASS_LEVEL;
 				#endif
