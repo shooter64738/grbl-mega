@@ -38,15 +38,20 @@ void backlash_comp(float *target, plan_line_data_t *pl_data)
 	uint8_t idx=0;
 	uint8_t needs_comp = 0;
 	
+	//printString("checking comp loop\r");
 	for (idx = 0;idx<N_AXIS;idx++)
 	{
-		back_lash_compensation.comp_per_axis_mm[idx] = target[idx];
+		//Must clear this or the next time we do a comp move we will still have any prior axis comps in there!
+		back_lash_compensation.comp_per_axis_mm[idx] = 0;// target[idx];
 		target_steps[idx] = lround(target[idx] * settings.steps_per_mm[idx]);
 		int32_t step_diff=(target_steps[idx] - position_steps[idx]);
 		step_diff = step_diff>0?1:(step_diff<0?-1:0);
 		if (back_lash_compensation.last_comp_direction[idx]!=0 && step_diff!=0
 		&& (back_lash_compensation.last_comp_direction[idx] !=step_diff))
 		{
+			//printString("axis ");
+			//printInteger(idx);
+			//printString(" set for comp");
 			back_lash_compensation.comp_per_axis_mm[idx] = settings.backlash_per_axis[idx]*step_diff;
 
 			needs_comp = 1;
@@ -64,4 +69,5 @@ void backlash_comp(float *target, plan_line_data_t *pl_data)
 		new_plan.condition |= PL_COND_FLAG_RAPID_MOTION;
 		mc_line(new_target,&new_plan);
 	}
+	
 }
