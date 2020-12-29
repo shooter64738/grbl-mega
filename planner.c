@@ -390,7 +390,7 @@ uint8_t plan_buffer_line(float *target, plan_line_data_t *pl_data)
 		delta_mm = (target_steps[idx] - position_steps[idx])/settings.steps_per_mm[idx];
 		#endif
 		unit_vec[idx] = delta_mm; // Store unit vector numerator
-		if (target_steps[idx]!=0)
+		if (delta_mm!=0)
 		back_lash_compensation.last_comp_direction[idx] = 1;
 		// Set direction bits. Bit enabled always means direction is negative.
 		#ifdef DEFAULTS_RAMPS_BOARD

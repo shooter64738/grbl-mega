@@ -44,8 +44,11 @@ void backlash_comp(float *target, plan_line_data_t *pl_data)
 		//Must clear this or the next time we do a comp move we will still have any prior axis comps in there!
 		back_lash_compensation.comp_per_axis_mm[idx] = 0;// target[idx];
 		target_steps[idx] = lround(target[idx] * settings.steps_per_mm[idx]);
+		//see if we are moving at all
 		int32_t step_diff=(target_steps[idx] - position_steps[idx]);
+		//if moving is it a + or - movement
 		step_diff = step_diff>0?1:(step_diff<0?-1:0);
+		//if last direction is different than the new direction, and its not 0, we need to comp.
 		if (back_lash_compensation.last_comp_direction[idx]!=0 && step_diff!=0
 		&& (back_lash_compensation.last_comp_direction[idx] !=step_diff))
 		{

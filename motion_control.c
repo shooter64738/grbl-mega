@@ -59,9 +59,7 @@ void mc_line(float *target, plan_line_data_t *pl_data)
 	//Determines if the motion we are about to execute has an axis moving in the opposite direction
 	//If it does, the value in settings for that axis is used to determine how far it needs to move
 	//to take up the mechanical slack in the motion for that axis.
-	//Since this doe snot 'insert' a motion to the planner, it just modifies an existing motion
-	//there should be no need to do any other checking of the motion buffer beyond what the planner
-	//is already doing.
+	//This could be a re-entrant call from backlash comp, so if it is, we dont want to 'comp the comp move'
 	if (!(pl_data->condition &(1<<PL_COND_FLAG_BACKLASH_COMP)))
 	{
 		backlash_comp(target,pl_data);
